@@ -1,0 +1,170 @@
+# GENERAL:
+#
+# ARN: Amazon Resource Name
+# arn:<partition>:<service>:<region>:<account>:<resource>
+# e.g. arn:aws:iam::aws:policy
+#
+#  NOTE:
+#
+#  If you create the target resource and related permissions in the same
+#  template, you might have a circular dependency.
+#
+#  For example, you might use the AWS::Lambda::Permission resource to grant
+#  the S3 bucket to invoke a Lambda function. However, AWS CloudFormation
+#  cannot create the S3 bucket until the bucket has permission to invoke the
+#  function (AWS CloudFormation checks if the S3 bucket can invoke the function).
+#  If you are using Refs to pass the bucket name, this leads to a circular
+#  dependency.
+#
+#  To avoid this dependency, you can create all resources without specifying
+#  the notification configuration. Then, update the stack with a notification
+#  configuration.
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Upload an object to an S3 bucket, triggering a Lambda event,
+  loading data into DynamoDB Table.
+
+# Parameters are provided in input screen before stack creation
+# The values are then passed during stack creation
+Parameters:
+
+  BucketName:
+    Description: S3 Bucket name
+    Type: String
+
+  TableName:
+    Description: DynamoDB Table name
+    Type: String
+
+Resources:
+
+# ------------------------------------------------------------------------
+# STEP 1:
+# Create Role for Lambda,
+# Create a DynamoDB Table,
+# Create the Lambda function
+# Permission for S3 to invoke Lambda
+# Create an S3 Bucket ( without notification ),
+# ------------------------------------------------------------------------
+
+  # Lambda Execution Role grants it permission to access AWS services and
+  # resources.
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      # Trust policy associated with this role. One is maximum.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            # Specifies element that is allowed or denied access to resource
+            Principal: {Service: [lambda.amazonaws.com]}
+            # Action to be allowed. Security Token Service (sts) hands out an IAM
+            # role with temporary security credentials by default last for an hour
+            Action: ['sts:AssumeRole']
+      # Paths are optional and unique to IAM Api. Policies can then be granted
+      # access to Roles within a specified sub path.
+      Path: /
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+        # Allows read activities and logging for DynamoDB
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaDynamoDBExecutionRole"
+      Policies:
+        - PolicyName: S3Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'S3:DeleteObject'
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                Resource: !Sub "arn:aws:s3:::${BucketName}/*"
+        - PolicyName: DynamoPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:BatchGetItem'
+                  - 'dynamodb:BatchWriteItem'
+                  - 'dynamodb:DeleteItem'
+                  - 'dynamodb:DescribeTable'
+                  - 'dynamodb:GetItem'
+                  - 'dynamodb:PutItem'
+                  - 'dynamodb:Query'
+                  - 'dynamodb:Scan'
+                  - 'dynamodb:TransactGetItems'
+                  - 'dynamodb:TransactWriteItems'
+                  - 'dynamodb:UpdateItem'
+                  - 'dynamodb:UpdateGlobalTableSettings'
+                  - 'dynamodb:UpdateTable'
+                Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${TableName}"
+
+  DynamoTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: !Ref TableName
+      AttributeDefinitions:
+        - AttributeName: application_number
+          AttributeType: S
+        - AttributeName: record_id
+          AttributeType: 'N'
+      KeySchema:
+        - AttributeName: application_number
+          KeyType: HASH
+        - AttributeName: record_id
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: '5'
+        WriteCapacityUnits: '5'
+
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      # !Ref BucketName is a reference to the respective parameter
+      BucketName: !Ref BucketName
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Function: !GetAtt
+              - LoadPermits
+              - Arn
+            Event: 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: reports/
+                  - Name: suffix
+                    Value: .xlsx
+    DependsOn: BucketPermission
+
+  BucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt LoadPermits.Arn
+      # FunctionName: !Ref LoadPermits
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      # Intrinsic function along with stack parameters is solving the
+      # problem of circular dependency
+      SourceArn: !Join
+        - ''
+        - - 'arn:aws:s3:::'
+          - !Sub '${BucketName}'
+
+  LoadPermits:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Loads Excel sheet to DynamoDB when invoked
+      Handler: LoadPermits.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      MemorySize: 512
+      CodeUri: ./
+      Timeout: 300
+      Runtime: python2.7
+
+
