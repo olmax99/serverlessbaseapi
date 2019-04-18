@@ -1,0 +1,308 @@
+# ARN: Amazon Resource Name
+# arn:<partition>:<service>:<region>:<account>:<resource>
+# e.g. arn:aws:iam::aws:policy
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: API Gateway and Lambda function exposing data from DynamoDb
+
+Parameters:
+  apiGatewayStageName:
+    Type: "String"
+    AllowedPattern: "^[a-z0-9]+$"
+    Default: "dev"
+
+  lambdaFunctionName:
+    Type: "String"
+    AllowedPattern: "^[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+$"
+    Default: "sam-proxy-api"
+
+  # -----------------------------------------------------------------------------------------
+  #   NOTE: This is the imported DynamoDb Table Name. Always Verify with Data Load Stack!!!
+  # -----------------------------------------------------------------------------------------
+  loaddataStackName:
+    Type: "String"
+    AllowedPattern: "^[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+$"
+
+Resources:
+  # This is always the base URL: http[s]://{restapi-id}.execute-api.amazonaws.com/<stage>
+  apiGateway:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: "sam-api-27"
+      Description: "An API Gateway with custom proxy+ endpoint"
+      # This is the default (added for clarity):
+      # Optimizes routing to nearest CloudFront if applicable.
+      EndpointConfiguration:
+        Types:
+          - EDGE
+
+  usagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn:
+      - "apiGatewayDeployment"
+    Properties:
+      ApiStages:
+        # The ID of an ApiGateway::RestApi that is in the specified Stage property
+        # that you want to associate with the usage plan.
+        - ApiId: !Ref "apiGateway"
+          Stage: !Ref "DevelopmentStage"
+      Description: Usage plan for arbitrary user with key
+      Quota:
+        Limit: 1000
+        Period: DAY
+      Throttle:
+        # Maximum requests allowed per token basket equals min(BurstLimit, BucketSize)
+        BurstLimit: 200
+        # Maximum avg requests per second
+        RateLimit: 100
+      UsagePlanName: "Permits dev access"
+
+  usagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref 'ApiKey'
+      KeyType: API_KEY
+      UsagePlanId: !Ref 'usagePlan'
+
+  # Can be utilized as an identification of the current user
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Name: !Join ["", [{"Ref": "AWS::StackName"}, "-apikey"]]
+      Description: "Permits API Key Dev"
+      Enabled: "true"
+      GenerateDistinctId: false
+
+  DevelopmentStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref "apiGatewayDeployment"
+      Description: "Development"
+      # The ID of the ApiGateway::RestApi resource that you're deploying with this stage.
+      RestApiId: !Ref "apiGateway"
+      StageName: !Ref "apiGatewayStageName"
+
+  # A Deployment is like an executable of an API represented by a RestApi resource.
+  # Creating a Deployment simply amounts to instantiating the Deployment resource. For
+  # the client to call your API, you must create a Deployment and associate a Stage with it.
+  apiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - "ProxyPermitsANYMethod"
+    Properties:
+      RestApiId: !Ref "apiGateway"
+      # StageName must be kept as Dummy in order to avoid
+      # circular Dependency with actual Stage
+      StageName: "DummyStage"
+
+# ------------------------------------------------------------------------------------------
+#   API Resources and Methods
+# ------------------------------------------------------------------------------------------
+
+  PermitsApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt "apiGateway.RootResourceId"
+      PathPart: "permits"
+      RestApiId: !Ref apiGateway
+
+  # This is the manual implementation for CORS - OPTIONS - Method execution
+  # [ https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS ] (currently not available in CloudFormation)
+  PermitsCorsOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      # ApiKeyRequired: true
+      AuthorizationType: NONE
+      RestApiId: !Ref "apiGateway"
+      ResourceId: !Ref "PermitsApiResource"
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'ANY,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: 'Empty'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+
+  ProxyPermitsApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !Ref "PermitsApiResource"
+      PathPart: '{proxy+}'
+      RestApiId: !Ref apiGateway
+
+  ProxyPermitsANYMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      ApiKeyRequired: true
+      AuthorizationType: NONE
+      HttpMethod: ANY
+      ResourceId: !Ref "ProxyPermitsApiResource"
+      RestApiId: !Ref "apiGateway"
+      # The Boolean specifies whether a parameter is required.
+      # A source must match the format: method.request.location.name
+      RequestParameters:
+        method.request.path.proxy: true
+      Integration:
+        CacheKeyParameters:
+          - 'method.request.path.proxy'
+        RequestParameters:
+          integration.request.path.proxy: 'method.request.path.proxy'
+        IntegrationHttpMethod: ANY
+        Type: AWS_PROXY
+        Uri: !Sub
+          - "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations"
+          - lambdaArn: !GetAtt "lambdaFunction.Arn"
+        # Based on Content-Type of the request header and the specified 'requestTemplates'
+        PassthroughBehavior: WHEN_NO_MATCH
+#        IntegrationResponses:
+#          - StatusCode: 200
+
+  ProxyPermitsCorsOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      # ApiKeyRequired: true
+      AuthorizationType: NONE
+      RestApiId: !Ref "apiGateway"
+      ResourceId: !Ref "ProxyPermitsApiResource"
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'ANY,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: 'Empty'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+
+# --------------------------------------------------------------------------------------------------
+#   Lambda and Permission
+# --------------------------------------------------------------------------------------------------
+
+  lambdaFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      CodeUri: ./
+      Description: "Method for proxy+ endpoint"
+      FunctionName: !Ref "lambdaFunctionName"
+      Handler: postPermits.lambda_handler
+      Environment:
+        Variables:
+          DYNAMOTABLE: !ImportValue
+            'Fn::Sub': '${loaddataStackName}-DynamoDbTable'
+      MemorySize: 128
+      Role: !GetAtt "lambdaIAMRole.Arn"
+      Runtime: python2.7
+      Timeout: 10
+
+  # Allows ApiGateway to invoke 'lambdaFunction': trigger can be found in AWS Lambda UI.
+  lambdaApiGatewayInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt "lambdaFunction.Arn"
+      Principal: "apigateway.amazonaws.com"
+      # Service execute-api designates the underlying API execution component of API Gateway
+      # For testing, the wildcard '*' can be put as a placeholder for the 'Stage' value: '/*/POST/'
+      # AWS doc is not completely clear here. The wildcard is relaxing the permission for apiGateway.
+      # SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${apiGateway}/${apiGatewayStageName}/*/permits/*"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${apiGateway}/${apiGatewayStageName}/*"
+
+# ----------------------------------------------------------------------------------------
+# LOGS
+# ----------------------------------------------------------------------------------------
+
+  lambdaIAMRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - "sts:AssumeRole"
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+      Policies:
+        - PolicyName: "LambdaLogs"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Effect: "Allow"
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${lambdaFunctionName}:*"
+        - PolicyName: DynamoPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:BatchGetItem'
+                  - 'dynamodb:BatchWriteItem'
+                  - 'dynamodb:DeleteItem'
+                  - 'dynamodb:DescribeTable'
+                  - 'dynamodb:GetItem'
+                  - 'dynamodb:PutItem'
+                  - 'dynamodb:Query'
+                  - 'dynamodb:Scan'
+                  - 'dynamodb:TransactGetItems'
+                  - 'dynamodb:TransactWriteItems'
+                  - 'dynamodb:UpdateItem'
+                  - 'dynamodb:UpdateGlobalTableSettings'
+                  - 'dynamodb:UpdateTable'
+                Resource: !Join
+                  - ''
+                  - - 'arn:aws:dynamodb:'
+                    - !Sub '${AWS::Region}:${AWS::AccountId}:table/'
+                    - Fn::ImportValue:
+                        !Sub '${loaddataStackName}-DynamoDbTable'
+
+
+
+  lambdaLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${lambdaFunctionName}"
+      RetentionInDays: 90
+
+Outputs:
+  apiGatewayInvokeURL:
+    Value: !Sub "https://${apiGateway}.execute-api.${AWS::Region}.amazonaws.com/${apiGatewayStageName}/permits"
+
+  lambdaArn:
+    Value: !GetAtt "lambdaFunction.Arn"
+
+
