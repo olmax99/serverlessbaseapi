@@ -24,7 +24,7 @@ The Preparation of the project takes six main steps:
 NOTE:
 
 This repository is containing two projects, which are put together for ease 
-of cloning. After copying, I recommend to replace this git repository aith one 
+of cloning. After copying, I recommend to replace this git repository with one 
 seperate git repository for each the 'loaddata' and the 'apigateway' project, 
 respectively.
 
