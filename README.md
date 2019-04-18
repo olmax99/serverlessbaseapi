@@ -77,7 +77,7 @@ Github, ensure that you have seperated the projects.
 In project folder, verify that the correct Python version is set:
 
 ```
-$ pyenv local 3.7.1
+$ pyenv local 2.7.13
 $ python --version
 
 $ aws --version         # if not installed ensure that the aws cli tool is installed in the global pyenv Python version
