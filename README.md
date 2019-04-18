@@ -120,6 +120,8 @@ docker run lambci/lambda:python3.7              # images locally for pyCharm
 In case the environment is set up correctly and in sync with pyCharm, there should appear an AWS Lambda Logo
 next to the `def lambda_handler` function in LoadPermits.py
 
+The JSON file `s3put_test.json` can be used as event input for the lambda_handler.
+
 - 'Right-click' def lambda_handler      <-- verify that lambda symbol appears, verify Run > Edit Configurations
 
 HINT:   For local cloudformation template debugging: `$ sam validate --debug -t template.yaml`

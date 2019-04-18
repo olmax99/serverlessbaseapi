@@ -12,6 +12,7 @@ tags
 vendor.tags
 .bundle
 *.kate-swp
+.idea/
 
 # Distribution / packaging
 .Python
@@ -78,9 +79,11 @@ ipython_config.py
 .venv
 env/
 venv/
+.venv/
 ENV/
 env.bak/
 venv.bak/
+.aws-sam/
 
 # mypy
 .mypy_cache/

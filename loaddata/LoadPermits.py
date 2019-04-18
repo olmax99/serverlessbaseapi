@@ -1,3 +1,4 @@
+import os
 import boto3
 import urllib
 import pyexcel as pe
@@ -16,6 +17,9 @@ conn = Connection(region='eu-central-1', host='https://dynamodb.eu-central-1.ama
 
 
 def lambda_handler(event, context):
+    # get table name from CloudFormation template
+    dynamo_table = os.environ['TableName']
+
     # set temp file
     # '/tmp' is directory to write to inside Lambda function container
     report_file = '/tmp/report.xlsx'
@@ -34,7 +38,7 @@ def lambda_handler(event, context):
             s3.download_fileobj(bucket, key, report)
 
         # expand table capacity during load
-        adjustCapacity(conn, 'permits-27-sam', 50, 50)
+        adjustCapacity(conn, dynamo_table, 50, 50)
 
         # parse records
         records = pe.iget_records(file_name=report_file)
@@ -43,10 +47,10 @@ def lambda_handler(event, context):
         write_records(records, create_permit, Permits)
 
         # decrease table capacity after load
-        adjustCapacity(conn, 'permits-27-sam', 5, 5)
+        adjustCapacity(conn, dynamo_table, 5, 5)
 
     except Exception as e:
-        adjustCapacity(conn, 'permits-27-sam', 5, 5)
+        adjustCapacity(conn, dynamo_table, 5, 5)
         print 'handler error: ', e
 
     finally:

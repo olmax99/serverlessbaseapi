@@ -1,3 +1,4 @@
+import os
 from pynamodb.models import Model
 from pynamodb.attributes import (UnicodeAttribute, NumberAttribute, UTCDateTimeAttribute)
 
@@ -10,9 +11,12 @@ def PermitsModel(db_region='', db_host='http://localhost:8000'):
     # See the docs on creating a model
     # http://pynamodb.readthedocs.io/en/latest/tutorial.html
 
+    # get table name from cloudformation template
+    dynamo_table = os.environ['TableName']
+
     class PermitClass(Model):
         class Meta:
-            table_name = 'permits-27-sam'
+            table_name = dynamo_table
             read_capacity_units = 5
             write_capacity_units = 5
             region = db_region

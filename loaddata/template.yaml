@@ -33,21 +33,16 @@ Parameters:
   BucketName:
     Description: S3 Bucket name
     Type: String
+    AllowedPattern: "^[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+$"
+    Default: records-permits-27-sam
 
   TableName:
     Description: DynamoDB Table name
     Type: String
+    AllowedPattern: "^[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+$"
+    Default: permits-27-sam
 
 Resources:
-
-# ------------------------------------------------------------------------
-# STEP 1:
-# Create Role for Lambda,
-# Create a DynamoDB Table,
-# Create the Lambda function
-# Permission for S3 to invoke Lambda
-# Create an S3 Bucket ( without notification ),
-# ------------------------------------------------------------------------
 
   # Lambda Execution Role grants it permission to access AWS services and
   # resources.
@@ -166,5 +161,16 @@ Resources:
       CodeUri: ./
       Timeout: 300
       Runtime: python2.7
+      # Pass parameter into lambda function
+      Environment:
+        Variables:
+          TableName: {Ref: TableName}
 
-
+# Export Table value in order to grant access from within API stack
+# - Only works within same region!
+Outputs:
+  LoadStackDynamoTableName:
+    Description: The Dynamodb Table to use for API method
+    Value: !Sub ${TableName}
+    Export:
+      Name: !Sub '${AWS::StackName}-DynamoDbTable'
