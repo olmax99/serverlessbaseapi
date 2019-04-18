@@ -10,7 +10,7 @@ AWS Lambda functions.
 
 The application will be automatically deployed using AWS CloudFormation in PyCharm.
 
-![Alt](images/serverlessbaseapi.png)
+![Schema](images/serverlessbaseapi.png)
 
 ## Getting Started
 
