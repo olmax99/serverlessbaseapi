@@ -62,8 +62,9 @@ serverlessbaseapi/
 + CloudFormation
 
 #### Installing
-Pyenv and Pipenv is the new way to go for Python version control and virtual environments.
-[Visit SecretOfPythonPath project for how to get started](https://github.com/olmax99/secretofpythonpath) 
+Pyenv and Pipenv is the new way to go for Python version control and virtual environments. Visit
+[SecretOfPythonPath](https://github.com/olmax99/secretofpythonpath) 
+project for how to get started.
 
 Docker should be installed on the system, else please read the [official Docker docs](https://docs.docker.com/).
 
@@ -181,7 +182,7 @@ For the API project set Environment Variable DYNAMOTABLE=permits-sam-27 inside t
 PyCharm run configuration for [Local] postPermits.lambda_handler.
 
 
-### Deploy all AWS resources with Cloudformation
+### Deploy all AWS resources with CloudFormation
 
 NOTE:   Always deploy the two projects in this order, because the Api Project will 
         need the Stack name of the Data Load Project for referencing.
@@ -262,7 +263,7 @@ Following are some general suggestions in case of troubleshooting:
         - `$ python --version`                  <-- verify that pyenv is picking up the correct version
         - `$ pip install --upgrade --user`      <-- verify that aws is running inside project dir
         
-```
+
 
 ## Running the tests
 
