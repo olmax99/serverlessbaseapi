@@ -26,7 +26,7 @@ Description: >
   Upload an object to an S3 bucket, triggering a Lambda event,
   loading data into DynamoDB Table.
 
-# Parameters are provided in input screen before stack creation
+# Parameters are provided in input screen or the command line before stack creation
 # The values are then passed during stack creation
 Parameters:
 

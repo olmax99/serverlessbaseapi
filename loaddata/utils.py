@@ -4,7 +4,7 @@ from time import sleep
 
 # Function to adjust table capacity to handle high capacity loads
 # and reset capacity after records have been loaded
-def adjustCapacity(conn, table, read_capacity=5, write_capacity=5):
+def adjust_capacity(conn, table, read_capacity=5, write_capacity=5):
     conn.update_table(table, read_capacity_units=read_capacity, write_capacity_units=write_capacity)
 
 
@@ -20,9 +20,8 @@ def clean_int(num):
     else:
         return int(num)
 
+
 # TODO: add def clean_date that accounts for empty date cells.
-
-
 # Merge multiple fields to create and address column
 def clean_address(rec):
     st_num = str(rec['STREET_NUMBER']).capitalize()

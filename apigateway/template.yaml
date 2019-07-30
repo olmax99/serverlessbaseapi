@@ -18,7 +18,7 @@ Parameters:
     Default: "sam-proxy-api"
 
   # -----------------------------------------------------------------------------------------
-  #   NOTE: This is the imported DynamoDb Table Name. Always Verify with Data Load Stack!!!
+  #   NOTE: This is the imported DynamoDb Table Name. Always Verify with LoadData Stack!!!
   # -----------------------------------------------------------------------------------------
   loaddataStackName:
     Type: "String"
@@ -167,7 +167,7 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub
           - "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations"
-          - lambdaArn: !GetAtt "lambdaFunction.Arn"
+          - lambdaArn: !GetAtt "PostPermits.Arn"
         # Based on Content-Type of the request header and the specified 'requestTemplates'
         PassthroughBehavior: WHEN_NO_MATCH
 #        IntegrationResponses:
@@ -207,13 +207,13 @@ Resources:
 #   Lambda and Permission
 # --------------------------------------------------------------------------------------------------
 
-  lambdaFunction:
+  PostPermits:
     Type: "AWS::Serverless::Function"
     Properties:
       CodeUri: ./
       Description: "Method for proxy+ endpoint"
       FunctionName: !Ref "lambdaFunctionName"
-      Handler: postPermits.lambda_handler
+      Handler: PostPermits.lambda_handler
       Environment:
         Variables:
           DYNAMOTABLE: !ImportValue
@@ -228,7 +228,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: "lambda:InvokeFunction"
-      FunctionName: !GetAtt "lambdaFunction.Arn"
+      FunctionName: !GetAtt "PostPermits.Arn"
       Principal: "apigateway.amazonaws.com"
       # Service execute-api designates the underlying API execution component of API Gateway
       # For testing, the wildcard '*' can be put as a placeholder for the 'Stage' value: '/*/POST/'
@@ -303,6 +303,6 @@ Outputs:
     Value: !Sub "https://${apiGateway}.execute-api.${AWS::Region}.amazonaws.com/${apiGatewayStageName}/permits"
 
   lambdaArn:
-    Value: !GetAtt "lambdaFunction.Arn"
+    Value: !GetAtt "PostPermits.Arn"
 
 

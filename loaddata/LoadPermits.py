@@ -8,7 +8,7 @@ from pynamodb.connection import Connection
 from models import PermitsModel
 
 # Our created utils
-from utils import (write_records, create_permit, adjustCapacity)
+from utils import (write_records, create_permit, adjust_capacity)
 
 
 s3 = boto3.client('s3')
@@ -38,7 +38,7 @@ def lambda_handler(event, context):
             s3.download_fileobj(bucket, key, report)
 
         # expand table capacity during load
-        adjustCapacity(conn, dynamo_table, 50, 50)
+        adjust_capacity(conn, dynamo_table, 50, 50)
 
         # parse records
         records = pe.iget_records(file_name=report_file)
@@ -47,10 +47,10 @@ def lambda_handler(event, context):
         write_records(records, create_permit, Permits)
 
         # decrease table capacity after load
-        adjustCapacity(conn, dynamo_table, 5, 5)
+        adjust_capacity(conn, dynamo_table, 5, 5)
 
     except Exception as e:
-        adjustCapacity(conn, dynamo_table, 5, 5)
+        adjust_capacity(conn, dynamo_table, 5, 5)
         print 'handler error: ', e
 
     finally:

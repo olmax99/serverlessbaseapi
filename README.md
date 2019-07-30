@@ -23,7 +23,7 @@ The Preparation of the project takes six main steps:
 5. Deploying the Api Project
 6. Calling the POST endpoint
 
-NOTE:
+**NOTE:**
 
 This repository is containing essentially two projects. It is best to work on them
 seperately. I.e. use PyCharm to open the project on 'loaddata' and/or on
@@ -52,7 +52,7 @@ serverlessbaseapi/
 ```
 
 
-### Prerequisites
+## Prerequisites
  
 + Pyenv
 + Pipenv integrated with Pyenv
@@ -63,15 +63,15 @@ serverlessbaseapi/
 + Docker
 + CloudFormation
 
-#### Installing
-Pyenv and Pipenv is the new way to go for Python version control and virtual environments. Visit
-[SecretOfPythonPath](https://github.com/olmax99/secretofpythonpath) 
+## Installing
+Pyenv and Pipenv is the new way to go for Python version control and virtual 
+environments. Visit [SecretOfPythonPath](https://github.com/olmax99/secretofpythonpath) 
 project for how to get started.
 
 Docker should be installed on the system, else please read the [official Docker docs](https://docs.docker.com/).
 
 ### Prepare the Project's Environment
-##### 1. Setting up the virtual environment and AWS tools
+#### 1. Setting up the virtual environment and AWS tools
 It is assumed that you are getting started with the project 'loaddata'. Further, 
 'loaddata' should be the project name when opened in pyCharm. Once cloned from
 Github, ensure that you have seperated the projects.
@@ -127,7 +127,12 @@ file:
 
 NOTE: Sam should not be available outside the virtual environment.
 
-##### 2. Sync pyCharm with the virtual environment and AWS tools
+#### 2. Sync PyCharm with the virtual environment and AWS tools
+
+You can skip this step if you don't intend to use the PyCharm Plugin. It is also
+possible to run all further steps from the command line.
+
+##### Using PyCharm Plugin
 
 In pyCharm > Settings > Plugins install 'AWS Toolkit'. This may require a restart.
 
@@ -152,7 +157,7 @@ PyCharm has problems with recognizing the in-project located virtualenvironment
 pipenv as a 'Project Interpreter', but rather 'Virtualenv Environment'. It is 
 recommended to install all packages from the terminal using `pipenv install <package>`.
 
-##### 3. Run a local test with the SAM tool
+#### 3. Run a local test with the SAM tool
 
 NOTE:
 
@@ -168,8 +173,11 @@ docker run lambci/lambda:python3.7              # images locally for pyCharm
 
 ```
 
-In case the environment is set up correctly and in sync with pyCharm, there should 
-appear an AWS Lambda Logo next to the `def lambda_handler` function in LoadPermits.py
+##### Using PyCharm Plugin
+
+In case the environment is set up correctly and in sync with PyCharm, there 
+should  appear an AWS Lambda Logo next to the `def lambda_handler` function in 
+LoadPermits.py
 
 The JSON file `s3put_test.json` can be used as event input for the lambda_handler.
 
@@ -188,11 +196,11 @@ Configuration:
 SAM CLI:
     Skip checking for newer container images: yes
     
-The Test Result should look like "load complete" along with information on the Billed
-Duration of the Lambda function.
+The Test Result should look like "load complete" along with information on the 
+Billed Duration of the Lambda function.
     
 
-NOTE:   Ensure that in PyCharm the correct AWS Region isselected (bottom left): 
+**NOTE:**   Ensure that in PyCharm the correct AWS Region isselected (bottom left): 
     
 
 HINT:   For local cloudformation template debugging: `$ sam validate --debug -t template.yaml`
@@ -204,13 +212,57 @@ the PyCharm run configuration for [Local] LoadPermits.lambda_handler.
 For the API project set Environment Variable DYNAMOTABLE=permits-sam-27 inside the
 PyCharm run configuration for [Local] postPermits.lambda_handler.
 
+##### Using the Command Line
 
-### Deploy all AWS resources with CloudFormation
+Validate the sam template.yaml file. In project directory (i.e. `loaddata`):
 
-NOTE:   Always deploy the two projects in this order, because the Api Project will 
-        need the Stack name of the Data Load Project for referencing.
+```
+$ sam validate
 
-##### 1. Data Load Project
+```
+
+Test by invoking locally
+
+```
+$ sam build    # BUILD SAM PACKAGE FIRST, OTHERWISE TEST WILL FAIL!
+
+$ sam local invoke -e s3put_test.json LoadPermits --skip-pull-image
+
+
+```
+
+**NOTE:** `sam build` will create a lambda package, which conatins all site-packages 
+along with the custom code in top folder. Its strucure will look similiar to this:
+
+
+```
+.aws-sam/
+└── build
+    ├── LoadPermits
+    │   ├── boto3
+    │   ├── LoadPermits.py
+    │   ├── models.py
+    │   ├── pyexcel
+    │   ├── pynamodb
+    │   ├── requirements.txt
+    │   ├── template.yaml
+    │   ├── urllib3
+    │   ├── utils.py
+    │   ├── xlrd
+    └── template.yaml
+    
+    
+```
+
+
+## Deploy all AWS resources with CloudFormation
+
+**NOTE:**   Always deploy the two projects in this order, because the Api Project 
+will need the Stack name of the Data Load Project for referencing.
+
+### 1. Data Load Project
+
+#### Deploy using PyCharm AWS toolkit plugin
 
 In project pane, 'Right-click' loaddata > Deploy Serverless Application. For the 
 first run I recommend setting the Stack Name to 'loadpermits-sam-27' (This is just 
@@ -219,57 +271,128 @@ for referral throughout this guideline).
 Create a new S3 Bucket or use an existing one. This is only for CloudFormation in
 order to create the deploy package zip file.
 
-For the Template Parameters just accept the default values for now and hit the Deploy
-button. In PyCharm you should now see how the CloudFormation pane is displaying all
-resources building up.
+For the Template Parameters just accept the default values for now and hit the 
+Deploy button. In PyCharm you should now see how the CloudFormation pane is 
+displaying all resources building up.
 
 In your AWS UI, go to service CloudFormation > Stacks. After you got a message 
 "Successfully executed change set" in PyCharm, the CloudFormation Stack with name
-'loadpermits-sam-27' will appear on the AWS UI. You can find all deployed  resources 
-from the template.yaml file in CloudFormation > Stacks > loadpermits-sam-27 > Resources.
+'loadpermits-sam-27' will appear on the AWS UI. You can find all deployed 
+resources  from the template.yaml file in 
 
-In CloudFormation > Stacks > loadpermits-sam-27 > Outputs, you will find an exported 
-Key,Value pair: LoadStackDynamoTableName, permits-27-sam. This is the DynamoDb table 
-that will be read from the Lambda function in the Api Project.
+CloudFormation > Stacks > loadpermits-sam-27 > Resources.
 
-Inside your CloudFormation > Stacks > Resources > loadpermits-sam-27 > Bucket, open 
-the link to the S3 Bucket. Create a new folder called '/reports'. Inside that folder 
-Upload the Excel file provided in the git repository. Now you follow the link in 
-CloudFormation > Stacks > Resources > DynamoTable. You should find all entries loaded 
-to the database table 'permits-sam-27' > Items.
+In CloudFormation > Stacks > loadpermits-sam-27 > Outputs, you will find an 
+exported Key,Value pair: LoadStackDynamoTableName, permits-27-sam. This is the 
+DynamoDb table  that will be read from the Lambda function in the ApiGateway
+Project.
+
+Inside your CloudFormation > Stacks > Resources > loadpermits-sam-27 > Bucket, 
+open the link to the S3 Bucket. Create a new folder called '/reports'. Inside that 
+folder upload the Excel file provided in the git repository. Now you follow the 
+link in  CloudFormation > Stacks > Resources > DynamoTable. You should find all 
+entries loaded to the database table 'permits-sam-27' > Items.
+
+---
     
 NOTE:
 
-When deploying the loaddata application to CloudFormation it will deploy the resources
-inside the project's directory as indicated in `template.yaml`. Read the in-line 
-comments for more details on the single CloudFormation resources and elements.
+When deploying the loaddata application to CloudFormation it will deploy the 
+resources inside the project's directory as indicated in `template.yaml`. Read the
+in-line  comments for more details on the single CloudFormation resources and 
+elements.
+
+#### Deploy from the command line
+
+You will need to specify the following parameters:
+
+* `--stack-name` (string): `cf-stack-loadpermits-sam-27`
+
+* `--template-file` (string): `$PWD/packaged_permits27_template.yaml`
+
+* `--s3-bucket` (string): `tmp-cloudformation-permits-27`
+
+* `--parameter-overrides` (list): `BucketName=records-permits-27-sam TableName=permits-27-sam`
+
+* [Optionally] `--tags` (list): `Name=CF-permits-27 Dataset=permits` 
 
 
-##### 2. Api Project
+```
+# Make sure that the Region for this bucket aligns with where you deploy
+$ aws s3 mb s3://tmp-cloudformation-permits-27 --region eu-central-1  # Example regions: us-east-1, ap-east-1, 
+                                                                      # eu-central-1, sa-east-1
 
-In your terminal, exit the pipenv environment change to the directory 'apigateway' and
-follow the steps from 'Prepare the Project's Environment'.
+$ sam package --output-template packaged_permits27_template.yaml --s3-bucket tmp-cloudformation-permits-27
 
-Prepare the project's environment the same way as for the Data Load Project. The output
-of the SAM local test should look like this: 
+$ sam deploy --template-file $PWD/packaged_permits27dataload_template.yaml \
+--stack-name cf-stack-loadpermits-sam-27 \
+--region eu-central-1 --capabilities CAPABILITY_IAM \
+--parameter-overrides BucketName=records-permits-27-sam TableName=permits-27-sam \
+--tags Name=CF-permits-27 Dataset=permits
+
+
+```
+
+
+### 2. Api Project
+
+---
+
+IMPORTANT: The Stack name of the 'loaddata' project is an input variable for the Api Project! It is being 
+passed via CloudFormation Outputs, from where it can be read in as an environment variable.
+
+---
+
+
+In your terminal, exit the virtual environment and change to the directory `serverlessbase/apigateway` 
+and repeat the steps from 'Prepare the Project's Environment'.
+
+Prepare the project's environment the same way as for the Data Load Project. Run the local test accordingly:
+
+```
+$ sam build
+
+$ sam local invoke PostPermits -e apiproxyrequest_test.json --env-vars env.json --skip-pull-image
+
+
+```
+
+
+The output of the `sam local invoke` test should look similiar to this: 
 
 ```
 {"body": "[]", "headers": {"Content-Type": "application/json"}, "statusCode": "200"}
 
 ```
 
+
+
+#### Deploy using PyCharm AWS toolkit plugin
+
 In project pane, 'Right-click' apigateway > Deploy Serverless Application. For the first run I 
 recommend setting the Stack Name to 'apipermits-sam-27'.
 
-IMPORTANT: The Stack name of the 'loaddata' project is an input variable for the Api Project!
+#### Deploy from the command line
 
-In your AWS UI, go to service CloudFormation > Stacks. After you got a message "Successfully 
-executed change set" in PyCharm, the CloudFormation Stack with name 'apipermits-sam-27' will 
-appear on the AWS UI.
+```
+$ sam package --output-template packaged_permits27gateway_template.yaml --s3-bucket tmp-cloudformation-permits-27
 
-Inside your CloudFormation > Stacks > Resources > apipermits-sam-27 > ApiKey, open the 
-link to the ApiKeys and note down the value for the Api key after you pressed the button 
-'show'.
+$ sam deploy --template-file $PWD/packaged_permits27gateway_template.yaml \
+--stack-name cf-stack-apipermits-sam-27 \
+--region eu-central-1 --capabilities CAPABILITY_IAM \
+--parameter-overrides loaddataStackName=cf-stack-loadpermits-sam-27 \
+--tags Name=cf-permits-27-agw Dataset=permits
+
+
+```
+
+In your AWS Console, go to service CloudFormation > Stacks. After you got a message 
+"Successfully executed change set" in PyCharm or the command line, the CloudFormation 
+Stack with name `apipermits-sam-27` will appear on the AWS Console.
+
+Inside your CloudFormation > Stacks > Resources > apipermits-sam-27 > ApiKey, open 
+the link to the ApiKeys and note down the value for the Api key after you pressed 
+the button 'show'.
 
 Go back to CloudFormation > Stacks > Resources > apipermits-sam-27 > Outputs. There you 
 will find the Key, Value pair: apiGatewayInvokeURL along with the respective endpoint.
