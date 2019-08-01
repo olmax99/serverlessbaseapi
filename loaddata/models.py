@@ -22,10 +22,10 @@ def PermitsModel(db_region='', db_host='http://localhost:8000'):
             region = db_region
             host = db_host
 
-        # set the partion key
+        # set the partion key indicated by 'hash_key=True'
         application_number = UnicodeAttribute(hash_key=True)
 
-        # set the sort key
+        # set the sort key indicated by 'range_key=True'
         record_id = NumberAttribute(range_key=True)
 
         # define other expected attributes

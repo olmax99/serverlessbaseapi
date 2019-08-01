@@ -1,7 +1,10 @@
+import decimal
 import json
-from models import PermitsModel
+import os
 
-Permits = PermitsModel('eu-central-1', 'https://dynamodb.eu-central-1.amazonaws.com')
+import boto3
+
+from endpoints.permits import all_permits, get_permit
 
 
 # A function to format the response
@@ -15,29 +18,31 @@ def respond(err, res=None, statusCode='200'):
     }
 
 
-# A function to query permits by partition key (application_number)
-def get_items(application_number):
-    items = []
-    app_num = '#' + str(application_number)
-
-    for item in Permits.query(app_num):
-        items.append(dict(item))
-
-    return items
-
-
 # Function executed when API is called and returns results
 def lambda_handler(event, context):
-    httpMethod = event['requestContext']['httpMethod']
-    application_number = event['pathParameters']['proxy']
+    http_method = event['requestContext']['httpMethod']
+    proxy_in = event['pathParameters']['proxy']
+
+    dynamo_table = os.environ['DYNAMOTABLE']
 
     # Only allow POST method
-    if httpMethod != 'POST':
-        return respond(None, {'message': httpMethod}, '405')
+    if http_method != 'POST':
+        return respond(None, {'message': http_method}, '405')
 
-    try:
-        items = get_items(application_number)
-        return respond(None, items)
+    if proxy_in.isnumeric():
+        application_number = proxy_in
+        try:
+            items = get_permit(application_number)
+            return respond(None, items)
+        except Exception as e:
+            return respond(e)
 
-    except Exception as e:
-        return respond(e)
+    if proxy_in == 'all-permits-json':
+        dynamodb = boto3.resource('dynamodb')
+        permits_table = dynamodb.Table(dynamo_table)
+        try:
+            items = all_permits(permits_table)
+            return respond(None, items)
+        except Exception as e:
+            return respond(e)
+

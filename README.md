@@ -287,21 +287,6 @@ exported Key,Value pair: LoadStackDynamoTableName, permits-27-sam. This is the
 DynamoDb table  that will be read from the Lambda function in the ApiGateway
 Project.
 
-Inside your CloudFormation > Stacks > Resources > loadpermits-sam-27 > Bucket, 
-open the link to the S3 Bucket. Create a new folder called '/reports'. Inside that 
-folder upload the Excel file provided in the git repository. Now you follow the 
-link in  CloudFormation > Stacks > Resources > DynamoTable. You should find all 
-entries loaded to the database table 'permits-sam-27' > Items.
-
----
-    
-NOTE:
-
-When deploying the loaddata application to CloudFormation it will deploy the 
-resources inside the project's directory as indicated in `template.yaml`. Read the
-in-line  comments for more details on the single CloudFormation resources and 
-elements.
-
 #### Deploy from the command line
 
 You will need to specify the following parameters:
@@ -322,9 +307,9 @@ You will need to specify the following parameters:
 $ aws s3 mb s3://tmp-cloudformation-permits-27 --region eu-central-1  # Example regions: us-east-1, ap-east-1, 
                                                                       # eu-central-1, sa-east-1
 
-$ sam package --output-template packaged_permits27_template.yaml --s3-bucket tmp-cloudformation-permits-27
+$ sam package --output-template packaged_permits27loaddata_template.yaml --s3-bucket tmp-cloudformation-permits-27
 
-$ sam deploy --template-file $PWD/packaged_permits27dataload_template.yaml \
+$ sam deploy --template-file $PWD/packaged_permits27loaddata_template.yaml \
 --stack-name cf-stack-loadpermits-sam-27 \
 --region eu-central-1 --capabilities CAPABILITY_IAM \
 --parameter-overrides BucketName=records-permits-27-sam TableName=permits-27-sam \
@@ -333,8 +318,25 @@ $ sam deploy --template-file $PWD/packaged_permits27dataload_template.yaml \
 
 ```
 
+#### Load data to DynamoDb
 
-### 2. Api Project
+Inside your CloudFormation > Stacks > Resources > loadpermits-sam-27 > Bucket, 
+open the link to the S3 Bucket. Create a new folder called '/reports'. Inside that 
+folder upload the Excel file provided in the git repository. Now you follow the 
+link in  CloudFormation > Stacks > Resources > DynamoTable. You should find all 
+entries loaded to the database table 'permits-sam-27' > Items.
+
+---
+    
+NOTE:
+
+When deploying the loaddata application to CloudFormation it will deploy the 
+resources inside the project's directory as indicated in `template.yaml`. Read the
+in-line  comments for more details on the single CloudFormation resources and 
+elements.
+
+
+### 2. Api Gateway Project
 
 ---
 

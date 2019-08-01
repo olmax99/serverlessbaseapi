@@ -104,7 +104,7 @@ Resources:
       TableName: !Ref TableName
       AttributeDefinitions:
         - AttributeName: application_number
-          AttributeType: S
+          AttributeType: 'S'
         - AttributeName: record_id
           AttributeType: 'N'
       KeySchema:
