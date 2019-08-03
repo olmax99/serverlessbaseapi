@@ -7,15 +7,27 @@ import boto3
 from endpoints.permits import all_permits, get_permit
 
 
+# Helper class to convert a DynamoDB item to JSON.
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, decimal.Decimal):
+            if abs(o) % 1 > 0:
+                return float(o)
+            else:
+                return int(o)
+        return super(DecimalEncoder, self).default(o)
+
+
 # A function to format the response
 def respond(err, res=None, statusCode='200'):
-    return {
-        'statusCode': '400' if err else statusCode,
-        'body': err.message if err else json.dumps(res),
-        'headers': {
-            'Content-Type': 'application/json',
-        },
-    }
+    # if not custom_res:
+        return {
+            'statusCode': '400' if err else statusCode,
+            'body': err.message if err else json.dumps(res, cls=DecimalEncoder),
+            'headers': {
+                'Content-Type': 'application/json',
+            },
+        }
 
 
 # Function executed when API is called and returns results

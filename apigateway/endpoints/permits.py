@@ -1,21 +1,9 @@
-
 import decimal
 import json
 
 from models.permits import PermitsModel
 
 Permits = PermitsModel('eu-central-1', 'https://dynamodb.eu-central-1.amazonaws.com')
-
-
-# Helper class to convert a DynamoDB item to JSON.
-class DecimalEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, decimal.Decimal):
-            if abs(o) % 1 > 0:
-                return float(o)
-            else:
-                return int(o)
-        return super(DecimalEncoder, self).default(o)
 
 
 def get_permit(application_number):
@@ -46,4 +34,4 @@ def all_permits(target_dynamo_table):
         response = target_dynamo_table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
         data.extend(response['Items'])
 
-    return json.dumps(data, cls=DecimalEncoder)
+    return data

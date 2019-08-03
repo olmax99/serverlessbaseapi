@@ -326,6 +326,14 @@ folder upload the Excel file provided in the git repository. Now you follow the
 link in  CloudFormation > Stacks > Resources > DynamoTable. You should find all 
 entries loaded to the database table 'permits-sam-27' > Items.
 
+Or from the command line use:
+
+```
+$ aws s3 cp ../December2016Issued.xlsx s3://records-permits-27-sam/reports/December2016Issued.xlsx
+
+
+```
+
 ---
     
 NOTE:
@@ -340,16 +348,19 @@ elements.
 
 ---
 
-IMPORTANT: The Stack name of the 'loaddata' project is an input variable for the Api Project! It is being 
-passed via CloudFormation Outputs, from where it can be read in as an environment variable.
+IMPORTANT: The Stack name of the 'loaddata' project is an input variable for the Api 
+Project! It is being passed via CloudFormation Outputs, from where it can be read in 
+as an environment variable.
 
 ---
 
 
-In your terminal, exit the virtual environment and change to the directory `serverlessbase/apigateway` 
-and repeat the steps from 'Prepare the Project's Environment'.
+In your terminal, exit the virtual environment and change to the directory
+`serverlessbase/apigateway` and repeat the steps from 'Prepare the Project's 
+Environment'.
 
-Prepare the project's environment the same way as for the Data Load Project. Run the local test accordingly:
+Prepare the project's environment the same way as for the Data Load Project. Run the 
+local test accordingly:
 
 ```
 $ sam build
@@ -375,6 +386,12 @@ In project pane, 'Right-click' apigateway > Deploy Serverless Application. For t
 recommend setting the Stack Name to 'apipermits-sam-27'.
 
 #### Deploy from the command line
+
+---
+
+THE PARAMETER-OVERRIDE `loaddataStackName` NEEDS TO MATCH WITH THE NAME OF THE `loaddata`
+PROJECT CF STACK!!
+
 
 ```
 $ sam package --output-template packaged_permits27gateway_template.yaml --s3-bucket tmp-cloudformation-permits-27
