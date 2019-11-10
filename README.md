@@ -454,6 +454,7 @@ Use SAM local tool in PyCharm.
 
 - Implement [CodeDeploy for Lambda](https://docs.aws.amazon.com/codedeploy/latest/userguide/deployment-steps-lambda.html)
 - [https://docs.aws.amazon.com/codedeploy/latest/userguide/tutorial-lambda-sam.html](https://docs.aws.amazon.com/codedeploy/latest/userguide/tutorial-lambda-sam.html)
+- Provide metadata for json data sets for checksums on the side of requesting API client 
 - Update all Lambda functions to Python3.7
 - Test on larger datasets
 - Provide alternative andpoint for e.g. csv files or similar
