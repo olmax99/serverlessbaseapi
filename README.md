@@ -450,6 +450,14 @@ Following are some general suggestions in case of troubleshooting:
 
 Use SAM local tool in PyCharm.
 
+## Next Steps
+
+- Implement [CodeDeploy for Lambda](https://docs.aws.amazon.com/codedeploy/latest/userguide/deployment-steps-lambda.html)
+- [https://docs.aws.amazon.com/codedeploy/latest/userguide/tutorial-lambda-sam.html](https://docs.aws.amazon.com/codedeploy/latest/userguide/tutorial-lambda-sam.html)
+- Update all Lambda functions to Python3.7
+- Test on larger datasets
+- Provide alternative andpoint for e.g. csv files or similar
+
 ## Author
 
 **OlafMarangone** - *Initial work* - [Serverless Base Api](https://gitlab.com/olmax99/serverlessbaseapi.git)  
