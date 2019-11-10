@@ -456,7 +456,7 @@ Use SAM local tool in PyCharm.
 - [https://docs.aws.amazon.com/codedeploy/latest/userguide/tutorial-lambda-sam.html](https://docs.aws.amazon.com/codedeploy/latest/userguide/tutorial-lambda-sam.html)
 - Provide metadata for json data sets for checksums on the side of requesting API client 
 - Update all Lambda functions to Python3.7
-- Test on larger datasets
+- Test on larger datasets, paginate results
 - Provide alternative andpoint for e.g. csv files or similar
 
 ## Author
